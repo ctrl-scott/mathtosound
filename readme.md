@@ -1,6 +1,7 @@
 # Alphabet Roots Synth with Spectrogram 🎵
 
-
+** ChatGPT Link**
+[https://chatgpt.com/share/690e9e2b-646c-800c-bc70-aae6f9f9442c](https://chatgpt.com/share/690e9e2b-646c-800c-bc70-aae6f9f9442c)\
 **Project:** `turning math to sound`
 
 ---

@@ -11,6 +11,8 @@
 This project converts **letters (A–Z)** into **musical tones** using a mathematical mapping derived from **quadratic roots**.  
 It blends **mathematics, sound synthesis, and visualization** — turning language into harmonic structures.
 
+**Note** The roots were chosen by ChatGPT from the equations ChatGPT generated.\
+
 Every letter corresponds to a *root value* from a solved quadratic expression such as:
 
 \[

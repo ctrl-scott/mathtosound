@@ -171,9 +171,9 @@ Attribution required if redistributed in modified form.
 
 If referencing academically, cite as:
 
- 
-> 2025. GitHub Repository. https://github.com/ctrl-scott/alphabet-roots-synth
-
+ (P.S. These citations need work if you try to use them)
+> 2025. GitHub Repository. https://github.com/ctrl-scott/alphabet-roots-synth \
+> Retrieved 2025. This YouTube Channel was also extremely helpful: [https://www.youtube.com/@brianmclogan](https://www.youtube.com/@brianmclogan)
 ---
 
 ## 🪶 Notes

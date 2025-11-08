@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Harmonic Wave and Spectrum Demo</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #ffffff;
+      color: #000000;
+    }
+    .container {
+      max-width: 600px;
+      min-width: 320px;
+      margin: 0 auto;
+      padding: 16px;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+    }
+    h1, h2 {
+      font-size: 18px;
+      margin: 8px 0;
+      text-align: center;
+    }
+    h2 {
+      font-size: 14px;
+      text-align: left;
+      margin-top: 14px;
+    }
+    p.desc {
+      font-size: 12px;
+      line-height: 1.4;
+      margin: 0 0 10px;
+    }
+    .controls {
+      border: 1px solid #999;
+      background: #fdfdfd;
+      padding: 8px;
+      margin-bottom: 12px;
+      font-size: 12px;
+    }
+    .controls label {
+      display: block;
+      margin: 4px 0 2px;
+    }
+    .controls input {
+      width: 100%;
+      padding: 4px;
+      box-sizing: border-box;
+      font-size: 12px;
+    }
+    .controls button {
+      margin-top: 6px;
+      padding: 4px 8px;
+      font-size: 12px;
+      cursor: pointer;
+      border-radius: 3px;
+      border: 1px solid #333;
+      background: #f3f3f3;
+    }
+    .info {
+      font-size: 11px;
+      margin-top: 4px;
+      white-space: pre-line;
+    }
+    .panel {
+      border: 1px solid #999;
+      background: #fdfdfd;
+      padding: 8px;
+      margin-bottom: 12px;
+    }
+    .panel canvas {
+      width: 100%;
+      max-width: 560px;
+      height: 150px;
+      border: 1px solid #ccc;
+      background: #ffffff;
+      display: block;
+      margin: 4px auto 0 auto;
+    }
+    .caption {
+      font-size: 11px;
+      margin-top: 4px;
+      color: #333;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>Harmonic Wave and Spectrum (f(x), g(x))</h1>
+  <p class="desc">
+    Use this tool to explore the <strong>harmonic function</strong> and its
+    <strong>spectrum</strong> based on numeric values of f(x) (amplitude) and
+    g(x) (base frequency). You can plug in results from any letter’s system.
+  </p>
+
+  <div class="controls">
+    <h2>Input: f(x) and g(x)</h2>
+    <p class="desc">
+      In your notation, f(x) is usually mapped to amplitude A and g(x) to
+      base frequency in Hz. Enter those values here and choose how many
+      harmonics you want to include.
+    </p>
+
+    <label for="ampInput">Amplitude A (from f(x))</label>
+    <input id="ampInput" type="number" step="0.000001" value="0.81818">
+
+    <label for="freqInput">Base frequency f (Hz) (from g(x))</label>
+    <input id="freqInput" type="number" step="0.01" value="234.78">
+
+    <label for="harmonicsInput">Number of harmonics N</label>
+    <input id="harmonicsInput" type="number" min="1" max="32" value="5">
+
+    <label for="durationInput">Wave duration (seconds) for analysis</label>
+    <input id="durationInput" type="number" step="0.001" value="0.02">
+
+    <button id="generateButton">Generate wave and spectrum</button>
+
+    <div class="info" id="infoBox">
+      Example: For your S, x = 3 case you might use
+      A ≈ 0.81818 and f ≈ 234.78 Hz with N = 5 harmonics.
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Harmonic Wave h(t)</h2>
+    <p class="desc">
+      The harmonic function combines N cosine waves at integer multiples of
+      the base frequency:
+      h(t) = Σ<sub>n=1..N</sub> (A / n) · cos(2π n f t)
+    </p>
+    <canvas id="waveCanvas" width="560" height="150"></canvas>
+    <div class="caption" id="waveCaption">
+      Waveform not generated yet.
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Spectrum |H(f)|</h2>
+    <p class="desc">
+      This is a simple discrete spectrum computed from the sampled waveform.
+      Peaks appear near the harmonic frequencies n·f. The horizontal axis is
+      frequency, the vertical axis shows magnitude.
+    </p>
+    <canvas id="specCanvas" width="560" height="150"></canvas>
+    <div class="caption" id="specCaption">
+      Spectrum not generated yet.
+    </div>
+  </div>
+</div>
+
+<script>
+  // Core parameters
+  const sampleRate = 44100; // Hz, standard audio sample rate
+
+  const waveCanvas = document.getElementById("waveCanvas");
+  const specCanvas = document.getElementById("specCanvas");
+  const waveCtx    = waveCanvas.getContext("2d");
+  const specCtx    = specCanvas.getContext("2d");
+
+  const ampInput       = document.getElementById("ampInput");
+  const freqInput      = document.getElementById("freqInput");
+  const harmonicsInput = document.getElementById("harmonicsInput");
+  const durationInput  = document.getElementById("durationInput");
+  const generateButton = document.getElementById("generateButton");
+
+  const infoBox     = document.getElementById("infoBox");
+  const waveCaption = document.getElementById("waveCaption");
+  const specCaption = document.getElementById("specCaption");
+
+  // Utility: clear and draw horizontal midline on waveform canvas
+  function clearWaveCanvas() {
+    waveCtx.clearRect(0, 0, waveCanvas.width, waveCanvas.height);
+    waveCtx.beginPath();
+    const midY = waveCanvas.height / 2;
+    waveCtx.moveTo(0, midY);
+    waveCtx.lineTo(waveCanvas.width, midY);
+    waveCtx.strokeStyle = "#cccccc";
+    waveCtx.lineWidth = 1;
+    waveCtx.stroke();
+  }
+
+  // Utility: clear spectrum canvas
+  function clearSpecCanvas() {
+    specCtx.clearRect(0, 0, specCanvas.width, specCanvas.height);
+    specCtx.beginPath();
+    specCtx.moveTo(0, specCanvas.height - 1);
+    specCtx.lineTo(specCanvas.width, specCanvas.height - 1);
+    specCtx.strokeStyle = "#cccccc";
+    specCtx.lineWidth = 1;
+    specCtx.stroke();
+  }
+
+  clearWaveCanvas();
+  clearSpecCanvas();
+
+  // Build harmonic waveform samples for given parameters.
+  //
+  // A  : base amplitude
+  // f0 : base frequency (Hz)
+  // N  : number of harmonics
+  // dur: duration (seconds)
+  //
+  // Returns: Float64Array of length numSamples with h(t).
+  function buildHarmonicWave(A, f0, N, dur) {
+    const numSamples = Math.max(32, Math.floor(sampleRate * dur));
+    const wave = new Float64Array(numSamples);
+
+    for (let n = 0; n < numSamples; n++) {
+      const t = n / sampleRate;
+      let value = 0;
+      for (let k = 1; k <= N; k++) {
+        const harmonicAmp = A / k; // simple 1/n decay
+        const omega = 2 * Math.PI * (k * f0);
+        value += harmonicAmp * Math.cos(omega * t);
+      }
+      wave[n] = value;
+    }
+    return wave;
+  }
+
+  // Compute a simple magnitude spectrum via a naive DFT.
+  // This is O(N^2) but fine for small demo sizes.
+  //
+  // wave: Float64Array samples
+  // Returns an object:
+  //   { freqs: Float64Array, mags: Float64Array }
+  function computeSpectrum(wave) {
+    const N = wave.length;
+    const half = Math.floor(N / 2); // up to Nyquist
+    const freqs = new Float64Array(half);
+    const mags  = new Float64Array(half);
+
+    for (let k = 0; k < half; k++) {
+      const freq = (k * sampleRate) / N;
+      freqs[k] = freq;
+      let real = 0;
+      let imag = 0;
+      for (let n = 0; n < N; n++) {
+        const phase = (-2 * Math.PI * k * n) / N;
+        real += wave[n] * Math.cos(phase);
+        imag += wave[n] * Math.sin(phase);
+      }
+      mags[k] = Math.sqrt(real * real + imag * imag);
+    }
+
+    // Simple normalization so the plot is readable.
+    let maxMag = 0;
+    for (let i = 0; i < mags.length; i++) {
+      if (mags[i] > maxMag) maxMag = mags[i];
+    }
+    if (maxMag > 0) {
+      for (let i = 0; i < mags.length; i++) {
+        mags[i] = mags[i] / maxMag;
+      }
+    }
+
+    return { freqs, mags };
+  }
+
+  // Draw waveform on waveCanvas
+  function drawWaveform(wave) {
+    clearWaveCanvas();
+    const w = waveCanvas.width;
+    const h = waveCanvas.height;
+    const midY = h / 2;
+
+    // Find max absolute value for vertical scaling
+    let maxAbs = 0;
+    for (let i = 0; i < wave.length; i++) {
+      const v = Math.abs(wave[i]);
+      if (v > maxAbs) maxAbs = v;
+    }
+    if (maxAbs === 0) maxAbs = 1;
+
+    waveCtx.beginPath();
+    for (let i = 0; i < wave.length; i++) {
+      const x = (i / (wave.length - 1)) * w;
+      const yNorm = wave[i] / maxAbs; // -1..1
+      const y = midY - yNorm * (h / 2 - 4); // padding 4 px
+
+      if (i === 0) {
+        waveCtx.moveTo(x, y);
+      } else {
+        waveCtx.lineTo(x, y);
+      }
+    }
+    waveCtx.strokeStyle = "#000000";
+    waveCtx.lineWidth = 1.5;
+    waveCtx.stroke();
+  }
+
+  // Draw spectrum on specCanvas
+  function drawSpectrum(freqs, mags, baseFreq, numHarmonics) {
+    clearSpecCanvas();
+    const w = specCanvas.width;
+    const h = specCanvas.height;
+
+    // Limit display to some max frequency (for readability)
+    const maxFreqDisplay = Math.max(baseFreq * (numHarmonics + 1), 2000);
+    const len = freqs.length;
+
+    specCtx.beginPath();
+    for (let i = 0; i < len; i++) {
+      const f = freqs[i];
+      if (f > maxFreqDisplay) break;
+
+      const x = (f / maxFreqDisplay) * w;
+      const y = h - mags[i] * (h - 4); // bars growing upward from bottom
+
+      specCtx.moveTo(x, h);
+      specCtx.lineTo(x, y);
+    }
+    specCtx.strokeStyle = "#000000";
+    specCtx.lineWidth = 1;
+    specCtx.stroke();
+  }
+
+  generateButton.addEventListener("click", function () {
+    const A  = parseFloat(ampInput.value);
+    const f0 = parseFloat(freqInput.value);
+    const N  = parseInt(harmonicsInput.value, 10);
+    const dur = parseFloat(durationInput.value);
+
+    if (!isFinite(A) || !isFinite(f0) || !isFinite(N) || !isFinite(dur) ||
+        A <= 0 || f0 <= 0 || N < 1 || dur <= 0) {
+      infoBox.textContent =
+        "Please enter valid positive values for A, f, N and duration.";
+      return;
+    }
+
+    infoBox.textContent =
+      "Using A = " + A.toFixed(6) +
+      ", f = " + f0.toFixed(2) + " Hz, " +
+      "N = " + N + " harmonic(s), duration = " + dur + " s.";
+
+    // 1) Build waveform
+    const wave = buildHarmonicWave(A, f0, N, dur);
+
+    // 2) Draw harmonic wave
+    drawWaveform(wave);
+    waveCaption.textContent =
+      "Harmonic waveform h(t) with A = " + A.toFixed(6) +
+      ", f = " + f0.toFixed(2) + " Hz, N = " + N + ".";
+
+    // 3) Compute spectrum
+    const spec = computeSpectrum(wave);
+
+    // 4) Draw spectrum
+    drawSpectrum(spec.freqs, spec.mags, f0, N);
+    specCaption.textContent =
+      "Approximate magnitude spectrum |H(f)|. Peaks should appear near " +
+      "multiples of the base frequency (" + f0.toFixed(2) + " Hz).";
+  });
+</script>
+</body>
+</html>

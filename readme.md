@@ -171,7 +171,7 @@ Attribution required if redistributed in modified form.
 
 If referencing academically, cite as:
 
-> Owen, Scott & OpenAI ChatGPT. *Alphabet Roots Synth: A Quadratic-to-Frequency Educational Demo.*  
+ 
 > 2025. GitHub Repository. https://github.com/ctrl-scott/alphabet-roots-synth
 
 ---

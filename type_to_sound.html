@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Name Roots Alphabet Synth</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+    }
+    .app {
+      width: 560px;
+      margin: 20px auto;
+      background: #ffffff;
+      border: 1px solid #ccc;
+      padding: 16px 20px;
+      box-sizing: border-box;
+    }
+    h1 {
+      font-size: 20px;
+      margin-top: 0;
+      text-align: center;
+    }
+    label {
+      font-weight: bold;
+    }
+    textarea {
+      width: 100%;
+      box-sizing: border-box;
+      height: 60px;
+      margin-top: 4px;
+      margin-bottom: 10px;
+      font-size: 14px;
+      padding: 6px;
+      resize: vertical;
+    }
+    .controls {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+    button {
+      padding: 6px 12px;
+      border-radius: 4px;
+      border: 1px solid #444;
+      background: #eee;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    button:hover {
+      background: #ddd;
+    }
+    .status {
+      font-size: 12px;
+      color: #555;
+      min-height: 16px;
+      margin-bottom: 10px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 4px 6px;
+      text-align: center;
+    }
+    th {
+      background: #f0f0f0;
+    }
+    .footer-note {
+      font-size: 11px;
+      color: #666;
+      margin-top: 8px;
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <h1>Alphabet Roots Synth (Scott Mapping)</h1>
+
+  <label for="textInput">Enter text (A–Z):</label>
+  <textarea id="textInput">Scott in Alabama</textarea>
+
+  <div class="controls">
+    <button id="playMelodyBtn">Play Melody</button>
+    <button id="playChordBtn">Play Chord</button>
+    <button id="stopBtn">Stop</button>
+  </div>
+
+  <div class="status" id="status"></div>
+
+  <table>
+    <thead>
+    <tr>
+      <th>Letter</th>
+      <th>Root r(L)</th>
+      <th>Frequency f(L) Hz (A₄ = 440)</th>
+    </tr>
+    </thead>
+    <tbody id="mappingTableBody"></tbody>
+  </table>
+
+  <div class="footer-note">
+    y(t) = A cos(2π f t), with each letter mapped to a semitone offset r(L) and frequency f(L) = 440 · 2^(r(L)/12).
+  </div>
+</div>
+
+<script>
+  // Root mapping from the quadratic system
+  const letterRoots = {
+    A: -2, B: -1, C:  2, D: -2, E:  1, F: -4, G: -5,
+    H: -4, I: -5, J:  4, K: -4, L: -2, M:  3, N: -3,
+    O:  1, P: -5, Q:  2, R: -1, S:  4, T: -4, U:  5,
+    V: -6, W:  3, X: -2, Y:  1, Z: -7
+  };
+
+  // Utility: root to frequency (Hz) using A4 = 440 Hz
+  function rootToFrequency(root) {
+    return 440 * Math.pow(2, root / 12);
+  }
+
+  // Build mapping table in the UI
+  function buildMappingTable() {
+    const body = document.getElementById("mappingTableBody");
+    body.innerHTML = "";
+    const letters = Object.keys(letterRoots).sort();
+    for (const ch of letters) {
+      const r = letterRoots[ch];
+      const f = rootToFrequency(r);
+      const tr = document.createElement("tr");
+      tr.innerHTML =
+        "<td>" + ch + "</td>" +
+        "<td>" + r + "</td>" +
+        "<td>" + f.toFixed(2) + "</td>";
+      body.appendChild(tr);
+    }
+  }
+
+  buildMappingTable();
+
+  // Web Audio setup
+  let audioCtx = null;
+  let activeOscillators = [];
+
+  function getAudioContext() {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    return audioCtx;
+  }
+
+  function setStatus(msg) {
+    document.getElementById("status").textContent = msg;
+  }
+
+  function stopAll() {
+    for (const osc of activeOscillators) {
+      try {
+        osc.stop();
+      } catch (e) {
+        // ignore
+      }
+    }
+    activeOscillators = [];
+    setStatus("Stopped.");
+  }
+
+  // Play a single tone for a given frequency and duration
+  function playTone(freq, startTime, duration, gainValue) {
+    const ctx = getAudioContext();
+    const osc = ctx.createOscillator();
+    const gainNode = ctx.createGain();
+
+    osc.type = "sine";  // cosine is just a phase shift of sine
+    osc.frequency.value = freq;
+    gainNode.gain.value = gainValue;
+
+    osc.connect(gainNode);
+    gainNode.connect(ctx.destination);
+
+    osc.start(startTime);
+    osc.stop(startTime + duration);
+
+    activeOscillators.push(osc);
+  }
+
+  // Convert a string to an array of frequencies, ignoring non A–Z characters
+  function textToFrequencies(text) {
+    const freqs = [];
+    const letters = [];
+    for (const chRaw of text) {
+      const ch = chRaw.toUpperCase();
+      if (letterRoots.hasOwnProperty(ch)) {
+        const root = letterRoots[ch];
+        const f = rootToFrequency(root);
+        freqs.push(f);
+        letters.push(ch);
+      }
+    }
+    return { freqs, letters };
+  }
+
+  // Play melody: letters one after another
+  function playMelody(text) {
+    stopAll();
+    const ctx = getAudioContext();
+    const now = ctx.currentTime;
+
+    const { freqs, letters } = textToFrequencies(text);
+    if (freqs.length === 0) {
+      setStatus("No valid letters A–Z were found in the input.");
+      return;
+    }
+
+    const toneDuration = 0.4;  // seconds per letter
+    const gap = 0.05;          // small gap between tones
+    let t = now;
+
+    for (let i = 0; i < freqs.length; i++) {
+      playTone(freqs[i], t, toneDuration, 0.5);
+      t += toneDuration + gap;
+    }
+
+    setStatus("Playing melody for: " + letters.join(""));
+  }
+
+  // Play chord: all letters at once
+  function playChord(text) {
+    stopAll();
+    const ctx = getAudioContext();
+    const now = ctx.currentTime;
+
+    const { freqs, letters } = textToFrequencies(text);
+    if (freqs.length === 0) {
+      setStatus("No valid letters A–Z were found in the input.");
+      return;
+    }
+
+    const chordDuration = 3.0;
+    // Reduce gain if there are many notes, to avoid clipping
+    const baseGain = 0.6 / Math.max(freqs.length, 1);
+
+    for (const f of freqs) {
+      playTone(f, now, chordDuration, baseGain);
+    }
+
+    setStatus("Playing chord for letters: " + letters.join(""));
+  }
+
+  // Wire up buttons
+  document.getElementById("playMelodyBtn").addEventListener("click", function () {
+    const text = document.getElementById("textInput").value;
+    playMelody(text);
+  });
+
+  document.getElementById("playChordBtn").addEventListener("click", function () {
+    const text = document.getElementById("textInput").value;
+    playChord(text);
+  });
+
+  document.getElementById("stopBtn").addEventListener("click", function () {
+    stopAll();
+  });
+</script>
+</body>
+</html>

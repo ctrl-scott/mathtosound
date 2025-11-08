@@ -107,3 +107,77 @@ Only **one** root was chosen per letter — producing *structured randomness*:
 
 ## 🧠 Conceptual Flow
 
+
+Each layer adds mathematical structure while allowing creative randomness in tone generation.
+
+---
+
+## 🧰 Technical Implementation
+
+**Core Technologies:**
+- HTML5  
+- JavaScript (Web Audio API + Canvas)  
+- Inline CSS for compact educational deployment
+
+**Key Components:**
+- `AnalyserNode` → Real-time frequency capture  
+- `Canvas` → Rolling spectrogram visualization  
+- `OscillatorNode` → Generates sine (cosine-equivalent) tones  
+- `GainNode` → Amplitude control  
+
+---
+
+## 🚀 Usage
+
+1. Save the file as `alphabet_roots_synth_spectrogram.html`.
+2. Open it in any modern browser (Chrome, Edge, Firefox).
+3. Type any text (A–Z letters) in the input box.
+4. Click **Play Melody** or **Play Chord**.
+5. Watch the **spectrogram** light up with frequency bands that represent your text.
+
+---
+
+## 🧩 Example
+
+**Input:**  
+
+**Encoded roots:** [4, 2, 1, -4, -4]  
+**Frequencies:** [554.37, 493.88, 466.16, 370.00, 370.00]  
+
+Plays as both a five-tone sequence (melody) or harmonic stack (chord).
+
+---
+
+## 🧭 Educational Uses
+
+- Demonstrate **waveforms, frequencies, and spectra** in an interactive way  
+- Teach the link between **mathematics and sound synthesis**  
+- Explore **chaotic order** from algebraic roots  
+- Experiment with **cipher-music**, encoding words into tones  
+
+---
+
+## 📜 License
+
+MIT License — for educational and non-commercial creative use.  
+Attribution required if redistributed in modified form.
+
+---
+
+## 🧾 Citation
+
+If referencing academically, cite as:
+
+> Owen, Scott & OpenAI ChatGPT. *Alphabet Roots Synth: A Quadratic-to-Frequency Educational Demo.*  
+> 2025. GitHub Repository. https://github.com/ctrl-scott/alphabet-roots-synth
+
+---
+
+## 🪶 Notes
+
+This project continues the lineage of **mathematical sonification** —  
+turning abstract logic into perceivable sound.  
+Each letter’s randomness is deterministic, rooted in algebra —  
+but collectively forms unique harmonic textures for every phrase.
+
+---
